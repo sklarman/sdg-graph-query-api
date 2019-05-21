@@ -39,16 +39,16 @@ def index():
 @app.route('/api', methods=['POST'])
 def get_related_entities():
     input_matches = request.get_json()
-    concept_index = {}
+    concept_index = set()
     for match in input_matches:
         url = match["url"]
-        concept_index = extend_index(concept_index, url)
+        concept_index.add(url)
     values_string = ""
     for uri in concept_index:
         value_string = "<" + uri + "> "
         values_string = values_string + value_string
     sparql_query = QUERY % values_string
-    sparql_results = get_sparql_results(sparql_query)
+    sparql_results = get_sparql_results(sparql_query) 
     final_index = {}
     for result in sparql_results['results']['bindings']:
         final_index = process_sparql_result(result, final_index)
@@ -64,13 +64,6 @@ def get_sparql_results(sparql_query):
     results = sparql.query().convert()
     return results
 
-def extend_index(index, key, increment=1):
-    if key in index:
-        index[key] = index[key] + increment
-    else:
-        index[key] = increment
-    return index
-
 def process_sparql_result(result, index):
     entity = result["entityBroader"]["value"]
     concept = result["concept"]["value"]
@@ -85,7 +78,8 @@ def process_sparql_result(result, index):
             ent_index["concept"][concept]["count"] += 1
         else:
             ent_index["concept"][concept] = {
-                "count": 1
+                "count": 1,
+                "intermediate": []
             }
             
     else:
@@ -95,10 +89,14 @@ def process_sparql_result(result, index):
             "label": entity_label,
             "concept": {
                 concept: {
-                    "count": 1
+                    "count": 1,
+                    "intermediate": []
                 }
             }
         }
+    
+    if concept_intermediate != concept and concept_intermediate not in ent_index["concept"][concept]["intermediate"]:
+            ent_index["concept"][concept]["intermediate"].append(concept_intermediate)
     
     return index
 
