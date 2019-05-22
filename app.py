@@ -1,9 +1,11 @@
 from flask import Flask, request, abort
 from SPARQLWrapper import SPARQLWrapper, JSON, BASIC
 import json
+from flask_cors import CORS, cross_origin
 
 
 app = Flask(__name__)
+CORS(app)
 
 GRAPHDB = "http://35.231.89.123:7200/repositories/sdgs"
 QUERY = """
@@ -33,6 +35,7 @@ def index():
     return "This is graph query API!"
 
 @app.route('/api', methods=['POST'])
+@cross_origin()
 def get_related_entities():
     input_matches = request.get_json()
     concept_index = {}
@@ -93,6 +96,7 @@ def process_sparql_result(result, index, concept_index):
     
     return index
 
+
 def extend_concept_index(match, concept_index):
     url = match["url"]
     weight = 1
@@ -106,4 +110,4 @@ def extend_concept_index(match, concept_index):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=5002, debug=True)
