@@ -7,10 +7,7 @@ app = Flask(__name__)
 
 GRAPHDB = "http://35.231.89.123:7200/repositories/sdgs"
 QUERY = """
-PREFIX sdgo: <http://data.un.org/ontology/sdg#>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-PREFIX : <http://data.un.org/ontology/sdg#>
-PREFIX schema: <http://schema.org/>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -31,29 +28,27 @@ SELECT ?concept ?conceptBroader ?entityBroader ?typeLabel ?entityLabel WHERE {
 }
 """
 
-
 @app.route('/')
 def index():
-    return "This is a graph query API!"
+    return "This is graph query API!"
 
 @app.route('/api', methods=['POST'])
 def get_related_entities():
     input_matches = request.get_json()
-    concept_index = set()
+    concept_index = {}
     for match in input_matches:
-        url = match["url"]
-        concept_index.add(url)
+        concept_index = extend_concept_index(match, concept_index)
     values_string = ""
     for uri in concept_index:
         value_string = "<" + uri + "> "
         values_string = values_string + value_string
     sparql_query = QUERY % values_string
-    sparql_results = get_sparql_results(sparql_query) 
-    final_index = {}
-    for result in sparql_results['results']['bindings']:
-        final_index = process_sparql_result(result, final_index)
+    sparql_results_entities = get_sparql_results(sparql_query) 
+    entities_results = {}
+    for result in sparql_results_entities['results']['bindings']:
+        entities_results = process_sparql_result(result, entities_results, concept_index)
 
-    return json.dumps(final_index), 200, {'Content-Type': 'application/json'}
+    return json.dumps(entities_results), 200, {'Content-Type': 'application/json'}
 
 def get_sparql_results(sparql_query):
     sparql = SPARQLWrapper(GRAPHDB)
@@ -64,41 +59,51 @@ def get_sparql_results(sparql_query):
     results = sparql.query().convert()
     return results
 
-def process_sparql_result(result, index):
+
+def process_sparql_result(result, index, concept_index):
     entity = result["entityBroader"]["value"]
     concept = result["concept"]["value"]
-    concept_intermediate = result["conceptBroader"]["value"]
+    # concept_intermediate = result["conceptBroader"]["value"]
     type_label = result["typeLabel"]["value"]
     entity_label = result["entityLabel"]["value"]
     
     if entity in index:
         ent_index = index[entity]
-        ent_index["count"] += 1
         if concept in ent_index["concept"]:
-            ent_index["concept"][concept]["count"] += 1
+            ent_index["concept"][concept]["weight"] += concept_index[concept]
         else:
             ent_index["concept"][concept] = {
-                "count": 1,
-                "intermediate": []
+                "weight": concept_index[concept],
+                # "intermediate": []
             }
-            
     else:
         index[entity] = {
-            "count": 1,
             "type": type_label, 
             "label": entity_label,
             "concept": {
                 concept: {
-                    "count": 1,
-                    "intermediate": []
+                    "weight": concept_index[concept],
+                    # "intermediate": []
                 }
             }
         }
     
-    if concept_intermediate != concept and concept_intermediate not in ent_index["concept"][concept]["intermediate"]:
-            ent_index["concept"][concept]["intermediate"].append(concept_intermediate)
+    # if concept_intermediate != concept and concept_intermediate not in ent_index["concept"][concept]["intermediate"]:
+    #         ent_index["concept"][concept]["intermediate"].append(concept_intermediate)
     
     return index
+
+def extend_concept_index(match, concept_index):
+    url = match["url"]
+    weight = 1
+    if 'weight' in match:
+        weight = match["weight"]
+    if url in concept_index:
+        concept_index[url] = concept_index[url] + weight
+    else:
+        concept_index[url] = weight
+    return concept_index
+
 
 if __name__ == '__main__':
     app.run(debug=True)
