@@ -18,12 +18,11 @@ SELECT ?concept ?conceptBroader ?entityBroader ?typeLabel ?entityLabel WHERE {
     
     ?concept skos:broader* ?conceptBroader .
     ?entity dct:subject ?conceptBroader .
-    ?entity skos:broader* ?entityBroader .
     
-    ?entityBroader rdf:type ?type .
+    ?entity rdf:type ?type .
     FILTER (CONTAINS(str(?type), "ontology/sdg"))
     ?type rdfs:label ?typeName .
-    ?entityBroader skos:prefLabel ?entityName .
+    ?entity skos:prefLabel ?entityName .
     
     BIND(STR(?typeName) as ?typeLabel)
     BIND(STR(?entityName) as ?entityLabel)
@@ -38,10 +37,12 @@ def index():
 @cross_origin()
 def get_related_entities():
     input_matches = request.get_json()
+    print(json.dumps(input_matches))
     concept_index = {}
     for match in input_matches:
         concept_index = extend_concept_index(match, concept_index)
     values_string = ""
+    print(json.dumps(concept_index))
     for uri in concept_index:
         value_string = "<" + uri + "> "
         values_string = values_string + value_string
@@ -103,7 +104,7 @@ def extend_concept_index(match, concept_index):
     if 'weight' in match:
         weight = match["weight"]
     if url in concept_index:
-        concept_index[url] = concept_index[url] + weight
+        concept_index[url] += weight
     else:
         concept_index[url] = weight
     return concept_index
