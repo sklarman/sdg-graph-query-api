@@ -13,7 +13,7 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-SELECT ?concept ?conceptBroader ?entityBroader ?typeLabel ?entityLabel WHERE {
+SELECT ?concept ?conceptBroader ?entity ?typeLabel ?entityLabel WHERE {
     VALUES ?concept { %s }
     
     ?concept skos:broader* ?conceptBroader .
@@ -65,7 +65,7 @@ def get_sparql_results(sparql_query):
 
 
 def process_sparql_result(result, index, concept_index):
-    entity = result["entityBroader"]["value"]
+    entity = result["entity"]["value"]
     concept = result["concept"]["value"]
     # concept_intermediate = result["conceptBroader"]["value"]
     type_label = result["typeLabel"]["value"]
