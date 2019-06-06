@@ -5,7 +5,7 @@ from flask_cors import CORS, cross_origin
 
 
 app = Flask(__name__)
-CORS(app, resources={r"/foo": {"origins": "http://34.66.148.181:5003"}})
+CORS(app, resources={r"/*": {"origins": "http://34.66.148.181:3000"}})
 
 GRAPHDB = "http://34.66.148.181:7200/repositories/sdgs"
 QUERY = """
