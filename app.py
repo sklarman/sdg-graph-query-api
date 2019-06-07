@@ -17,6 +17,8 @@ SELECT ?concept ?conceptBroader ?entity ?typeLabel ?entityLabel WHERE {
     VALUES ?concept { %s }
     
     ?concept skos:broader* ?conceptBroader .
+    ?entityLow dct:subject ?conceptBroader .
+    ?entityLow skos:broader* ?entity .
     ?entity dct:subject ?conceptBroader .
     
     ?entity rdf:type ?type .
