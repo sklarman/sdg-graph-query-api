@@ -13,21 +13,23 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX schema: <http://schema.org/>
 SELECT ?concept ?conceptBroader ?entity ?typeLabel ?entityLabel WHERE {
     VALUES ?concept { %s }
     
     ?concept skos:broader* ?conceptBroader .
-    ?entityLow dct:subject ?conceptBroader .
-    ?entityLow skos:broader* ?entity .
-    ?entity dct:subject ?conceptBroader .
+    ?entity dct:subject ?conceptBroader .    
     
     ?entity rdf:type ?type .
     FILTER (CONTAINS(str(?type), "ontology/sdg"))
     ?type rdfs:label ?typeName .
     ?entity skos:prefLabel ?entityName .
-    
+    OPTIONAL {
+    ?entity schema:description ?entityDescription .
+    }
+
     BIND(STR(?typeName) as ?typeLabel)
-    BIND(STR(?entityName) as ?entityLabel)
+    BIND(COALESCE(STR(?entityDescription), STR(?entityName)) as ?entityLabel)
 }
 """
 
@@ -73,14 +75,21 @@ def process_sparql_result(result, index, concept_index):
     type_label = result["typeLabel"]["value"]
     entity_label = result["entityLabel"]["value"]
     
+    weight = concept_index[concept]
+    if type_label=="Goal":
+        weight = weight * 3
+    if type_label=="Target":
+        weight = weight * 1.3
+    if type_label=="Indicator":
+        weight = weight * 1.1
+
     if entity in index:
         ent_index = index[entity]
         if concept in ent_index["concept"]:
-            ent_index["concept"][concept]["weight"] += concept_index[concept]
+            ent_index["concept"][concept]["weight"] += weight
         else:
             ent_index["concept"][concept] = {
-                "weight": concept_index[concept],
-                # "intermediate": []
+                "weight": weight
             }
     else:
         index[entity] = {
@@ -88,8 +97,7 @@ def process_sparql_result(result, index, concept_index):
             "label": entity_label,
             "concept": {
                 concept: {
-                    "weight": concept_index[concept],
-                    # "intermediate": []
+                    "weight": weight
                 }
             }
         }
