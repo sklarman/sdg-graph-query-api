@@ -33,6 +33,12 @@ SELECT ?concept ?conceptBroader ?entity ?typeLabel ?entityLabel WHERE {
 }
 """
 
+
+# ?concept skos:broader* ?conceptBroader .
+#     ?entityLow dct:subject ?conceptBroader .
+#     ?entityLow skos:broader* ?entity .
+#     ?entity dct:subject ?conceptBroader .
+    
 @app.route('/')
 def index():
     return "This is graph query API!"
@@ -41,20 +47,23 @@ def index():
 @cross_origin()
 def get_related_entities():
     input_matches = request.get_json()
-    print(json.dumps(input_matches))
     concept_index = {}
     for match in input_matches:
         concept_index = extend_concept_index(match, concept_index)
     values_string = ""
-    print(json.dumps(concept_index))
+    entities_results = {}
+    counter = 0
     for uri in concept_index:
+        counter += 1
         value_string = "<" + uri + "> "
         values_string = values_string + value_string
-    sparql_query = QUERY % values_string
-    sparql_results_entities = get_sparql_results(sparql_query) 
-    entities_results = {}
-    for result in sparql_results_entities['results']['bindings']:
-        entities_results = process_sparql_result(result, entities_results, concept_index)
+        if (counter % 50 == 0) or counter == len(concept_index):
+            print(counter)
+            sparql_query = QUERY % values_string
+            sparql_results_entities = get_sparql_results(sparql_query) 
+            for result in sparql_results_entities['results']['bindings']:
+                entities_results = process_sparql_result(result, entities_results, concept_index)
+            values_string = ""
 
     return json.dumps(entities_results), 200, {'Content-Type': 'application/json'}
 
@@ -71,10 +80,9 @@ def get_sparql_results(sparql_query):
 def process_sparql_result(result, index, concept_index):
     entity = result["entity"]["value"]
     concept = result["concept"]["value"]
-    # concept_intermediate = result["conceptBroader"]["value"]
     type_label = result["typeLabel"]["value"]
     entity_label = result["entityLabel"]["value"]
-    
+
     weight = concept_index[concept]
     if type_label=="Goal":
         weight = weight * 3
