@@ -1,6 +1,8 @@
 from flask import Flask, request, abort
 from SPARQLWrapper import SPARQLWrapper, JSON, BASIC
 import json
+import csv
+import copy
 from flask_cors import CORS, cross_origin
 
 
@@ -18,7 +20,8 @@ SELECT ?concept ?conceptBroader ?entity ?typeLabel ?entityLabel WHERE {
     VALUES ?concept { %s }
     
     ?concept skos:broader* ?conceptBroader .
-    ?entity dct:subject ?conceptBroader .    
+    ?entity dct:subject ?conceptBroader .   
+
     
     ?entity rdf:type ?type .
     FILTER (CONTAINS(str(?type), "ontology/sdg"))
@@ -33,12 +36,85 @@ SELECT ?concept ?conceptBroader ?entity ?typeLabel ?entityLabel WHERE {
 }
 """
 
+with open('response-template.json', encoding="utf-8") as f:
+    response_template = json.load(f)
+
+concept_index_main = {}
+
+concept_index_source = csv.DictReader(open("concept-index.tsv", encoding="utf8"), delimiter="\t")
+for concept in concept_index_source:
+    concept_index_main[concept["id"]] = {
+        "url": concept["id"],
+        "label": concept["label"],
+        "source": concept["source"]
+    }
 
 # ?concept skos:broader* ?conceptBroader .
 #     ?entityLow dct:subject ?conceptBroader .
 #     ?entityLow skos:broader* ?entity .
 #     ?entity dct:subject ?conceptBroader .
     
+
+def merge(source, target):
+    for key in source:
+        target[key] = source[key]
+        if key == 'value':
+            target[key] = round(target[key])
+
+    return target
+
+def get_final_result(entities):
+
+    resp = copy.deepcopy(response_template)
+    
+    goals = []
+
+    for goal in resp["children"]:
+        if goal["id"] in entities:
+            goal_entity = entities[goal["id"]]
+
+            targets = []
+
+            for target in goal["children"]:
+                if target["id"] in entities:
+                    target_entity = entities[target["id"]]
+
+                    indicators = []
+
+                    for indicator in target["children"]:
+                        if indicator["id"] in entities:
+                            indicator_entity = entities[indicator["id"]]
+
+                            serieses = []
+
+                            for series in indicator["children"]:
+                                if series["id"] in entities:
+                                    series_entity = entities[series["id"]]
+
+                                    for concept in series_entity["concept"]:
+                                        series_entity["concept"][concept]["value"] = round(series_entity["concept"][concept]["value"])
+                                    serieses.append(merge(series_entity, series))
+
+                            indicator["children"] = serieses
+                    
+                        indicators.append(merge(indicator_entity, indicator))
+
+                    target["children"] = indicators
+            
+                targets.append(merge(target_entity, target))
+
+            goal["children"] = targets
+            
+        goals.append(merge(goal_entity, goal))
+
+    resp["children"] = goals
+
+    return resp
+
+
+
+
+
 @app.route('/')
 def index():
     return "This is graph query API!"
@@ -65,7 +141,9 @@ def get_related_entities():
                 entities_results = process_sparql_result(result, entities_results, concept_index)
             values_string = ""
 
-    return json.dumps(entities_results), 200, {'Content-Type': 'application/json'}
+    result = get_final_result(entities_results)
+
+    return json.dumps(result), 200, {'Content-Type': 'application/json'}
 
 def get_sparql_results(sparql_query):
     sparql = SPARQLWrapper(GRAPHDB)
@@ -80,6 +158,7 @@ def get_sparql_results(sparql_query):
 def process_sparql_result(result, index, concept_index):
     entity = result["entity"]["value"]
     concept = result["concept"]["value"]
+    broader = result["conceptBroader"]["value"]
     type_label = result["typeLabel"]["value"]
     entity_label = result["entityLabel"]["value"]
 
@@ -93,19 +172,31 @@ def process_sparql_result(result, index, concept_index):
 
     if entity in index:
         ent_index = index[entity]
-        if concept in ent_index["concept"]:
-            ent_index["concept"][concept]["weight"] += weight
+        ent_index["value"] += weight
+        if broader in ent_index["concept"]:
+            ent_index["concept"][broader]["value"] += weight
+            if concept not in ent_index["concept"][broader]["subconcepts"]:
+                ent_index["concept"][broader]["subconcepts"][concept] = concept_index_main[concept]
         else:
-            ent_index["concept"][concept] = {
-                "weight": weight
+            ent_index["concept"][broader] = {
+                "value": weight,
+                "label": concept_index_main[broader]["label"],
+                "url": concept_index_main[broader]["url"],
+                "source": concept_index_main[broader]["source"],
+                "subconcepts": { concept: concept_index_main[concept] }
             }
     else:
         index[entity] = {
             "type": type_label, 
-            "label": entity_label,
+            "name": entity_label,
+            "value": weight,
             "concept": {
-                concept: {
-                    "weight": weight
+                broader: {
+                    "value": weight,
+                    "label": concept_index_main[broader]["label"],
+                    "url": concept_index_main[broader]["url"],
+                    "source": concept_index_main[broader]["source"],
+                    "subconcepts": { concept: concept_index_main[concept] }
                 }
             }
         }
