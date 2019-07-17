@@ -85,27 +85,39 @@ def get_final_result(entities):
                         if indicator["id"] in entities:
                             indicator_entity = entities[indicator["id"]]
 
+                            
+
                             serieses = []
 
                             for series in indicator["children"]:
                                 if series["id"] in entities:
                                     series_entity = entities[series["id"]]
 
-                                    for concept in series_entity["concept"]:
-                                        series_entity["concept"][concept]["value"] = round(series_entity["concept"][concept]["value"])
-                                    serieses.append(merge(series_entity, series))
+                                    new_series = merge(series_entity, series)
+
+                                    if new_series["value"] > 2:
+                                        serieses.append(new_series)
 
                             indicator["children"] = serieses
+
+                            new_indicator = merge(indicator_entity, indicator)
                     
-                        indicators.append(merge(indicator_entity, indicator))
+                            if new_indicator["value"] > 2  or len(serieses)>0:
+                                indicators.append(new_indicator)
 
                     target["children"] = indicators
+
+                    new_target = merge(target_entity, target)
             
-                targets.append(merge(target_entity, target))
+                    if new_target["value"] > 2 or len(indicators)>0:
+                        targets.append(new_target)
 
             goal["children"] = targets
+
+            new_goal = merge(goal_entity, goal)
             
-        goals.append(merge(goal_entity, goal))
+            if new_goal["value"] > 2  or len(targets)>0:
+                goals.append(new_goal)
 
     resp["children"] = goals
 
