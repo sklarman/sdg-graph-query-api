@@ -6,6 +6,7 @@ import copy
 import requests
 from requests.auth import HTTPBasicAuth
 from flask_cors import CORS, cross_origin
+from pyld import jsonld
 
 
 app = Flask(__name__)
@@ -160,7 +161,10 @@ def get_related_stats():
     stat = input_params["stat"]
     query = STAT_QUERY % (countries, stat)
     response = requests.get(GRAPHDB, auth=('sdg-guest', 'lod4stats'), params={"query":query}, headers={"Accept":"application/ld+json"})
-    return Response(response.content, mimetype='application/json') 
+    
+    doc = {'@context': { '@vocab': 'http://data.un.org/ontology/sdg#'}, '@graph': json.loads(response.content) }
+    flattened = jsonld.flatten(doc, { '@vocab': 'http://data.un.org/ontology/sdg#'})
+    return Response(json.dumps(flattened["@graph"]), mimetype='application/json') 
 
 
 @app.route('/api', methods=['POST'])
