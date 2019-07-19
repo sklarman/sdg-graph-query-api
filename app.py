@@ -1,13 +1,15 @@
-from flask import Flask, request, abort
+from flask import Flask, request, abort, Response
 from SPARQLWrapper import SPARQLWrapper, JSON, BASIC
 import json
 import csv
 import copy
+import requests
+from requests.auth import HTTPBasicAuth
 from flask_cors import CORS, cross_origin
 
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://34.66.148.181:3000"}})
+# CORS(app, resources={r"/*": {"origins": "http://34.66.148.181:3000"}})
 
 GRAPHDB = "http://34.66.148.181:7200/repositories/sdgs"
 QUERY = """
@@ -33,6 +35,25 @@ SELECT ?concept ?conceptBroader ?entity ?typeLabel ?entityLabel WHERE {
 
     BIND(STR(?typeName) as ?typeLabel)
     BIND(COALESCE(STR(?entityDescription), STR(?entityName)) as ?entityLabel)
+}
+"""
+
+STAT_QUERY = """
+PREFIX sdgo: <http://data.un.org/ontology/sdg#>
+CONSTRUCT {
+    ?x ?p ?o
+} WHERE {
+
+    VALUES ?country { %s }
+
+    GRAPH <http://data.un.org/series/sdg> {
+    
+        ?x sdgo:fromSeries <%s> .
+        ?x sdgo:ISO3CD ?country .
+        ?x ?p ?o .
+        FILTER(?p!=sdgo:fromSeries)
+
+    }
 }
 """
 
@@ -130,6 +151,17 @@ def get_final_result(entities):
 @app.route('/')
 def index():
     return "This is graph query API!"
+
+@app.route('/stats', methods=['POST'])
+@cross_origin()
+def get_related_stats():
+    input_params = request.get_json()
+    countries = "\"" + ("\" \"").join(input_params["countries"]) + "\""
+    stat = input_params["stat"]
+    query = STAT_QUERY % (countries, stat)
+    response = requests.get(GRAPHDB, auth=('sdg-guest', 'lod4stats'), params={"query":query}, headers={"Accept":"application/ld+json"})
+    return Response(response.content, mimetype='application/json') 
+
 
 @app.route('/api', methods=['POST'])
 @cross_origin()
