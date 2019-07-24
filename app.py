@@ -19,7 +19,7 @@ PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX schema: <http://schema.org/>
-SELECT ?concept ?conceptBroader ?entity ?typeLabel ?entityLabel WHERE {
+SELECT ?concept ?conceptBroader ?entity ?typeLabel WHERE {
     VALUES ?concept { %s }
     
     ?concept skos:broader* ?conceptBroader .
@@ -29,13 +29,8 @@ SELECT ?concept ?conceptBroader ?entity ?typeLabel ?entityLabel WHERE {
     ?entity rdf:type ?type .
     FILTER (CONTAINS(str(?type), "ontology/sdg"))
     ?type rdfs:label ?typeName .
-    ?entity skos:prefLabel ?entityName .
-    OPTIONAL {
-    ?entity schema:description ?entityDescription .
-    }
 
     BIND(STR(?typeName) as ?typeLabel)
-    BIND(COALESCE(STR(?entityDescription), STR(?entityName)) as ?entityLabel)
 }
 """
 
@@ -94,19 +89,21 @@ def get_final_result(entities):
     for goal in resp["children"]:
         if goal["id"] in entities:
             goal_entity = entities[goal["id"]]
+            goal_entity["name"] = goal["name"]
 
             targets = []
 
             for target in goal["children"]:
                 if target["id"] in entities:
                     target_entity = entities[target["id"]]
+                    target_entity["name"] = target["name"]
 
                     indicators = []
 
                     for indicator in target["children"]:
                         if indicator["id"] in entities:
                             indicator_entity = entities[indicator["id"]]
-
+                            indicator_entity["name"] = indicator["name"]
                             
 
                             serieses = []
@@ -114,6 +111,7 @@ def get_final_result(entities):
                             for series in indicator["children"]:
                                 if series["id"] in entities:
                                     series_entity = entities[series["id"]]
+                                    series_entity["name"] = series["name"]
 
                                     new_series = merge(series_entity, series)
 
@@ -208,7 +206,6 @@ def process_sparql_result(result, index, concept_index):
     concept = result["concept"]["value"]
     broader = result["conceptBroader"]["value"]
     type_label = result["typeLabel"]["value"]
-    entity_label = result["entityLabel"]["value"]
 
     weight = concept_index[concept]
     if type_label=="Goal":
@@ -236,7 +233,6 @@ def process_sparql_result(result, index, concept_index):
     else:
         index[entity] = {
             "type": type_label, 
-            "name": entity_label,
             "value": weight,
             "concept": {
                 broader: {
