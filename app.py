@@ -162,7 +162,7 @@ def get_related_stats():
     
     doc = {'@context': { '@vocab': 'http://data.un.org/ontology/sdg#'}, '@graph': json.loads(response.content) }
     flattened = jsonld.flatten(doc, { '@vocab': 'http://data.un.org/ontology/sdg#'})
-    return Response(json.dumps(flattened["@graph"]), mimetype='application/json') 
+    return Response(json.dumps(flattened), mimetype='application/json') 
 
 
 @app.route('/api', methods=['POST'])
