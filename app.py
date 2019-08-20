@@ -179,10 +179,98 @@ def get_related_stats():
             "@id": "http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure",
             "@type": "@id"
         },
-        "year": {
+         "ageCode": {
+        "@id": "http://data.un.org/codes/sdg/age",
+        "@type": "@id"
+        },
+        "sexCode": {
+            "@id": "http://data.un.org/codes/sdg/sex",
+            "@type": "@id"
+        },
+        "locationCode": {
+            "@id": "http://data.un.org/codes/sdg/location",
+            "@type": "@id"
+        },
+        "nameOfInternationalInstitutionCode": {
+            "@id": "http://data.un.org/codes/sdg/nameOfInternationalInstitution",
+            "@type": "@id"
+        },
+        "citiesCode": {
+            "@id": "http://data.un.org/codes/sdg/cities",
+            "@type": "@id"
+        },
+        "typeOfProductCode": {
+            "@id": "http://data.un.org/codes/sdg/typeOfProduct",
+            "@type": "@id"
+        },
+        "boundCode": {
+            "@id": "http://data.un.org/codes/sdg/bound",
+            "@type": "@id"
+        },
+        "freqCode": {
+            "@id": "http://data.un.org/codes/sdg/freq",
+            "@type": "@id"
+        },
+        "typeOfSpeedCode": {
+            "@id": "http://data.un.org/codes/sdg/typeOfSpeed",
+            "@type": "@id"
+        },
+        "nameOfNonCommunicableDiseaseCode": {
+            "@id": "http://data.un.org/codes/sdg/nameOfNonCommunicableDisease",
+            "@type": "@id"
+        },
+        "typeOfOccupationCode": {
+            "@id": "http://data.un.org/codes/sdg/typeOfOccupation",
+            "@type": "@id"
+        },
+        "ihrCapacityCode": {
+            "@id": "http://data.un.org/codes/sdg/ihrCapacity",
+            "@type": "@id"
+        },
+        "educationLevelCode": {
+            "@id": "http://data.un.org/codes/sdg/educationLevel",
+            "@type": "@id"
+        },
+        "typeOfSkillCode": {
+            "@id": "http://data.un.org/codes/sdg/typeOfSkill",
+            "@type": "@id"
+        },
+        "levelStatusCode": {
+            "@id": "http://data.un.org/codes/sdg/levelStatus",
+            "@type": "@id"
+        },
+        "disabilityStatusCode": {
+            "@id": "http://data.un.org/codes/sdg/disabilityStatus",
+            "@type": "@id"
+        },
+        "migratoryStatusCode": {
+            "@id": "http://data.un.org/codes/sdg/migratoryStatus",
+            "@type": "@id"
+        },
+        "modeOfTransportationCode": {
+            "@id": "http://data.un.org/codes/sdg/modeOfTransportation",
+            "@type": "@id"
+        },
+        "typeOfMobileTechnologyCode": {
+            "@id": "http://data.un.org/codes/sdg/typeOfMobileTechnology",
+            "@type": "@id"
+        },
+        "geoAreaCode": {
+            "@id": "http://data.un.org/codes/sdg/geoArea",
+            "@type": "@id"
+        },
+        "unitsCode": {
+            "@id": "http://data.un.org/codes/sdg/units",
+            "@type": "@id"
+        },
+        "yearCode": {
             "@id": "http://data.un.org/codes/sdg/year",
             "@type": "http://www.w3.org/2001/XMLSchema#gYear"
-        }
+        },
+        "hazardTypeCode": {
+            "@id": "http://data.un.org/codes/sdg/hazardType",
+            "@type": "@id"
+        }        
     }
     doc = {'@context': context, '@graph': json.loads(response.content) }
     flattened = jsonld.flatten(doc, context)
