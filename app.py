@@ -12,7 +12,7 @@ from pyld import jsonld
 app = Flask(__name__)
 # CORS(app, resources={r"/*": {"origins": "http://34.66.148.181:3000"}})
 
-GRAPHDB = "http://34.66.148.181:7200/repositories/sdgs"
+GRAPHDB = "http://34.66.148.181:7200/repositories/sdg-data"
 QUERY = """
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX dct: <http://purl.org/dc/terms/>
@@ -35,22 +35,30 @@ SELECT ?concept ?conceptBroader ?entity ?typeLabel WHERE {
 """
 
 STAT_QUERY = """
+PREFIX qb: <http://purl.org/linked-data/cube#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX sdgo: <http://data.un.org/ontology/sdg#>
+PREFIX codes: <http://data.un.org/codes/sdg/>
 CONSTRUCT {
-    ?x ?p ?o
-} WHERE {
-
-    VALUES ?country { %s }
-
-    GRAPH <http://data.un.org/series/sdg> {
-    
-        ?x sdgo:fromSeries <%s> .
-        ?x sdgo:ISO3CD ?country .
-        ?x ?p ?o .
-        FILTER(?p!=sdgo:fromSeries)
-
-    }
+        ?obs ?p ?y .    
+    	?obs ?z ?u .
+     	?obs <http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure> ?unitCode .
+    	?obs qb:measureType ?series .
 }
+where { 
+    GRAPH <http://data.un.org/series/sdg> {
+        BIND(<%s> as ?series)
+        VALUES ?country { %s } 
+        
+        ?series <http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure> ?unitCode .
+        ?series qb:slice ?slice .
+        ?slice <http://data.un.org/codes/sdg/geoArea> ?country .
+        ?slice qb:observation ?obs .
+        ?slice ?z ?u .
+        ?z a qb:DimensionProperty .  
+        ?obs ?p ?y . 
+    }
+} 
 """
 
 with open('response-template.json', encoding="utf-8") as f:
@@ -155,13 +163,29 @@ def index():
 @cross_origin()
 def get_related_stats():
     input_params = request.get_json()
-    countries = "\"" + ("\" \"").join(input_params["countries"]) + "\""
+    countries = "<" + ("> <").join(input_params["countries"]) + ">"
     stat = input_params["stat"]
-    query = STAT_QUERY % (countries, stat)
+    query = STAT_QUERY % (stat, countries)
+    print(query)
     response = requests.get(GRAPHDB, auth=('sdg-guest', 'lod4stats'), params={"query":query}, headers={"Accept":"application/ld+json"})
     
-    doc = {'@context': { '@vocab': 'http://data.un.org/ontology/sdg#'}, '@graph': json.loads(response.content) }
-    flattened = jsonld.flatten(doc, { '@vocab': 'http://data.un.org/ontology/sdg#'})
+    context = {
+        "Observation": "http://purl.org/linked-data/cube#Observation",
+        "measureType": {
+            "@id": "http://purl.org/linked-data/cube#measureType",
+            "@type": "@id"
+        },
+        "unitMeasure": {
+            "@id": "http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure",
+            "@type": "@id"
+        },
+        "year": {
+            "@id": "http://data.un.org/codes/sdg/year",
+            "@type": "http://www.w3.org/2001/XMLSchema#gYear"
+        }
+    }
+    doc = {'@context': context, '@graph': json.loads(response.content) }
+    flattened = jsonld.flatten(doc, context)
     return Response(json.dumps(flattened), mimetype='application/json') 
 
 
