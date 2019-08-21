@@ -166,7 +166,6 @@ def get_related_stats():
     countries = "<" + ("> <").join(input_params["countries"]) + ">"
     stat = input_params["stat"]
     query = STAT_QUERY % (stat, countries)
-    print(query)
     response = requests.get(GRAPHDB, auth=('sdg-guest', 'lod4stats'), params={"query":query}, headers={"Accept":"application/ld+json"})
     
     context = {
@@ -179,9 +178,9 @@ def get_related_stats():
             "@id": "http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure",
             "@type": "@id"
         },
-         "ageCode": {
-        "@id": "http://data.un.org/codes/sdg/age",
-        "@type": "@id"
+        "ageCode": {
+            "@id": "http://data.un.org/codes/sdg/age",
+            "@type": "@id"
         },
         "sexCode": {
             "@id": "http://data.un.org/codes/sdg/sex",
