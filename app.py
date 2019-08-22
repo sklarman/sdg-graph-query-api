@@ -50,13 +50,37 @@ where {
         BIND(<%s> as ?series)
         VALUES ?country { %s } 
         
-        ?series <http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure> ?unitCode .
         ?series qb:slice ?slice .
         ?slice <http://data.un.org/codes/sdg/geoArea> ?country .
+        ?series <http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure> ?unitCode .
         ?slice qb:observation ?obs .
+        FILTER EXISTS { 
+            ?obs ?series [] .
+        }
         ?slice ?z ?u .
         ?z a qb:DimensionProperty .  
         ?obs ?p ?y . 
+    }
+} 
+"""
+
+STAT_QUERY2 = """
+PREFIX qb: <http://purl.org/linked-data/cube#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX sdgo: <http://data.un.org/ontology/sdg#>
+PREFIX codes: <http://data.un.org/codes/sdg/>
+CONSTRUCT {
+        ?observation a qb:Observation .    
+    	?observation ?predicate ?object .
+}
+where { 
+    GRAPH <http://data.un.org/series/sdg/observations> {
+        BIND(<%s> as ?series)
+        VALUES ?country { %s } 
+        
+        ?observation <http://data.un.org/codes/sdg/geoArea> ?country .
+        ?observation ?series ?value .
+        ?observation ?predicate ?object .
     }
 } 
 """
@@ -166,6 +190,7 @@ def get_related_stats():
     countries = "<" + ("> <").join(input_params["countries"]) + ">"
     stat = input_params["stat"]
     query = STAT_QUERY % (stat, countries)
+    print(query)
     response = requests.get(GRAPHDB, auth=('sdg-guest', 'lod4stats'), params={"query":query}, headers={"Accept":"application/ld+json"})
     
     context = {
@@ -271,6 +296,7 @@ def get_related_stats():
             "@type": "@id"
         }        
     }
+    
     doc = {'@context': context, '@graph': json.loads(response.content) }
     flattened = jsonld.flatten(doc, context)
     return Response(json.dumps(flattened), mimetype='application/json') 
