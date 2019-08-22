@@ -34,59 +34,62 @@ SELECT ?concept ?conceptBroader ?entity ?typeLabel WHERE {
 }
 """
 
-STAT_QUERY = """
-PREFIX qb: <http://purl.org/linked-data/cube#>
-PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-PREFIX sdgo: <http://data.un.org/ontology/sdg#>
-PREFIX codes: <http://data.un.org/codes/sdg/>
-CONSTRUCT {
-        ?obs ?p ?y .    
-    	?obs ?z ?u .
-     	?obs <http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure> ?unitCode .
-    	?obs qb:measureType ?series .
-}
-where { 
-    GRAPH <http://data.un.org/series/sdg> {
-        BIND(<%s> as ?series)
-        VALUES ?country { %s } 
-        
-        ?series qb:slice ?slice .
-        ?slice <http://data.un.org/codes/sdg/geoArea> ?country .
-        ?series <http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure> ?unitCode .
-        ?slice qb:observation ?obs .
-        FILTER EXISTS { 
-            ?obs ?series [] .
-        }
-        ?slice ?z ?u .
-        ?z a qb:DimensionProperty .  
-        ?obs ?p ?y . 
-    }
-} 
-"""
+# STAT_QUERY = """
+# PREFIX qb: <http://purl.org/linked-data/cube#>
+# PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+# PREFIX sdgo: <http://data.un.org/ontology/sdg#>
+# PREFIX codes: <http://data.un.org/codes/sdg/>
+# CONSTRUCT {
+#         ?obs ?p ?y .    
+#     	?obs ?z ?u .
+#      	?obs <http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure> ?unitCode .
+#     	?obs qb:measureType ?series .
+# }
+# where { 
+#     GRAPH <http://data.un.org/series/sdg> {
+#         BIND(<%s> as ?series)
+#         # VALUES ?country { %s } 
 
-STAT_QUERY2 = """
-PREFIX qb: <http://purl.org/linked-data/cube#>
-PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-PREFIX sdgo: <http://data.un.org/ontology/sdg#>
-PREFIX codes: <http://data.un.org/codes/sdg/>
-CONSTRUCT {
-        ?observation a qb:Observation .    
-    	?observation ?predicate ?object .
-}
-where { 
-    GRAPH <http://data.un.org/series/sdg/observations> {
-        BIND(<%s> as ?series)
-        VALUES ?country { %s } 
+#         ?series qb:slice ?slice .
+#         # ?slice <http://data.un.org/codes/sdg/geoArea> ?country .
+#         ?series <http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure> ?unitCode .
+#         ?slice qb:observation ?obs .
+#         FILTER EXISTS { 
+#             ?obs ?series [] .
+#         }
+#         ?slice ?z ?u .
+#         ?z a qb:DimensionProperty .  
+#         ?obs ?p ?y . 
+#     }
+# } 
+# """
+
+# STAT_QUERY2 = """
+# PREFIX qb: <http://purl.org/linked-data/cube#>
+# PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+# PREFIX sdgo: <http://data.un.org/ontology/sdg#>
+# PREFIX codes: <http://data.un.org/codes/sdg/>
+# CONSTRUCT {
+#         ?observation a qb:Observation .    
+#     	?observation ?predicate ?object .
+# }
+# where { 
+#     GRAPH <http://data.un.org/series/sdg/observations> {
+#         BIND(<%s> as ?series)
+#         VALUES ?country { %s } 
         
-        ?observation <http://data.un.org/codes/sdg/geoArea> ?country .
-        ?observation ?series ?value .
-        ?observation ?predicate ?object .
-    }
-} 
-"""
+#         ?observation <http://data.un.org/codes/sdg/geoArea> ?country .
+#         ?observation ?series ?value .
+#         ?observation ?predicate ?object .
+#     }
+# } 
+# """
 
 with open('response-template.json', encoding="utf-8") as f:
     response_template = json.load(f)
+
+with open('cubes.json', encoding="utf-8") as f:
+    cubes = json.load(f)
 
 concept_index_main = {}
 
@@ -187,12 +190,20 @@ def index():
 @cross_origin()
 def get_related_stats():
     input_params = request.get_json()
-    countries = "<" + ("> <").join(input_params["countries"]) + ">"
+    # countries = "<" + ("> <").join(input_params["countries"]) + ">"
+    countries = input_params["countries"] 
     stat = input_params["stat"]
-    query = STAT_QUERY % (stat, countries)
-    print(query)
-    response = requests.get(GRAPHDB, auth=('sdg-guest', 'lod4stats'), params={"query":query}, headers={"Accept":"application/ld+json"})
+    # query = STAT_QUERY % (stat, countries)
+    # print(query)
+    # response = requests.get(GRAPHDB, auth=('sdg-guest', 'lod4stats'), params={"query":query}, headers={"Accept":"application/ld+json"})
     
+    graph = []
+
+    stat_cubes = cubes[stat]
+    for country in countries:
+        if country in stat_cubes:
+            graph.extend(stat_cubes[country])
+
     context = {
         "Observation": "http://purl.org/linked-data/cube#Observation",
         "measureType": {
@@ -297,9 +308,11 @@ def get_related_stats():
         }        
     }
     
-    doc = {'@context': context, '@graph': json.loads(response.content) }
-    flattened = jsonld.flatten(doc, context)
-    return Response(json.dumps(flattened), mimetype='application/json') 
+    # doc = {'@context': context, '@graph': json.loads(response.content) }
+    # flattened = jsonld.flatten(doc, context)
+    # return Response(json.dumps(flattened), mimetype='application/json') 
+
+    return Response(json.dumps({'@context':context, '@graph': graph}), mimetype='application/json') 
 
 
 @app.route('/api', methods=['POST'])
