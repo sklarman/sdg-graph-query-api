@@ -18,20 +18,40 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX schema: <http://schema.org/>
 SELECT ?concept ?conceptBroader ?entity ?typeLabel WHERE {
     VALUES ?concept { %s }
     
-    ?concept skos:broader* ?conceptBroader .
-    ?entity dct:subject ?conceptBroader .   
+    GRAPH <http://data.un.org/concepts/sdg> {
+        ?concept skos:broader* ?conceptBroader .
+        ?entity dct:subject ?conceptBroader .   
+    }
 
-    
     ?entity rdf:type ?type .
     FILTER (CONTAINS(str(?type), "ontology/sdg"))
     ?type rdfs:label ?typeName .
 
     BIND(STR(?typeName) as ?typeLabel)
 }
+"""
+
+KEYWORD_QUERY = """
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX sdgo: <http://data.un.org/ontology/sdg#>
+SELECT ?id ?type (GROUP_CONCAT(?con; separator=";") as ?matches) where { 
+    
+    GRAPH <http://data.un.org/kos/sdg> { 
+        VALUES ?t { sdgo:Goal sdgo:Target sdgo:Indicator sdgo:Series }
+        ?id a ?t
+        BIND(STRAFTER(str(?t), "http://data.un.org/ontology/sdg#") as ?type)
+    }
+    
+    OPTIONAL {
+        GRAPH <http://data.un.org/concepts/sdg> { 
+                ?id dct:subject ?con .
+        }
+    }
+} GROUP BY ?id ?type
 """
 
 # STAT_QUERY = """
@@ -91,21 +111,71 @@ with open('response-template.json', encoding="utf-8") as f:
 with open('cubes.json', encoding="utf-8") as f:
     cubes = json.load(f)
 
+
+def get_sparql_results(sparql_query):
+    sparql = SPARQLWrapper(GRAPHDB)
+    sparql.setHTTPAuth(BASIC)
+    sparql.setCredentials("sdg-guest", "lod4stats")
+    sparql.setQuery(sparql_query)
+    sparql.setReturnFormat(JSON)
+    results = sparql.query().convert()
+    return results
+
 concept_index_main = {}
 
-concept_index_source = csv.DictReader(open("concept-index.tsv", encoding="utf8"), delimiter="\t")
+concept_index_source = csv.DictReader(open("concepts-source-index.tsv", encoding="utf8"), delimiter="\t")
 for concept in concept_index_source:
+    exact = []
+    exacts = concept["matches"].split(";")
+    for con in exacts:
+        if "metadata" in con:
+            source = "UNBIS"
+        else:
+            source = "EuroVoc"
+        ex = {
+            "uri": con,
+            "source": source
+        }
+        exact.append(ex)
+
     concept_index_main[concept["id"]] = {
-        "url": concept["id"],
+        "uri": concept["id"],
         "label": concept["label"],
-        "source": concept["source"]
+        "sources": exact
     }
+
+keywords_index = {}
+    
+keyword_results = get_sparql_results(KEYWORD_QUERY)['results']['bindings']
+
+for entity in keyword_results:
+    keyword_concepts = entity["matches"]["value"].split(";")
+    keyword_records = {}
+    for keyword in keyword_concepts:
+        keyword_records[keyword] = concept_index_main[keyword]
+    keywords_index[entity["id"]["value"]] = {
+        "type": entity["type"]["value"],
+        "keywords": keyword_records
+    }
+
 
 # ?concept skos:broader* ?conceptBroader .
 #     ?entityLow dct:subject ?conceptBroader .
 #     ?entityLow skos:broader* ?entity .
 #     ?entity dct:subject ?conceptBroader .
     
+def add_remaining_keywords(entities_results):
+    for entity in keywords_index:
+        if entity in entities_results:
+            for keyword in keywords_index[entity]["keywords"]:
+                if keyword not in entities_results[entity]["keywords"]:
+                    entities_results[entity]["keywords"][keyword] = keywords_index[entity]["keywords"][keyword]
+        else:
+            entities_results[entity] = keywords_index[entity]
+
+    return entities_results
+
+
 
 def merge(source, target):
     for key in source:
@@ -126,6 +196,9 @@ def get_final_result(entities):
             goal_entity = entities[goal["id"]]
             goal_entity["name"] = goal["name"]
 
+            if goal["id"] == "http://data.un.org/kos/sdg/01":
+                print(goal_entity)
+
             targets = []
 
             for target in goal["children"]:
@@ -139,7 +212,6 @@ def get_final_result(entities):
                         if indicator["id"] in entities:
                             indicator_entity = entities[indicator["id"]]
                             indicator_entity["name"] = indicator["name"]
-                            
 
                             serieses = []
 
@@ -337,18 +409,11 @@ def get_related_entities():
                 entities_results = process_sparql_result(result, entities_results, concept_index)
             values_string = ""
 
-    result = get_final_result(entities_results)
+
+    enriched_entities = add_remaining_keywords(entities_results)
+    result = get_final_result(enriched_entities)
 
     return json.dumps(result), 200, {'Content-Type': 'application/json'}
-
-def get_sparql_results(sparql_query):
-    sparql = SPARQLWrapper(GRAPHDB)
-    sparql.setHTTPAuth(BASIC)
-    sparql.setCredentials("sdg-guest", "lod4stats")
-    sparql.setQuery(sparql_query)
-    sparql.setReturnFormat(JSON)
-    results = sparql.query().convert()
-    return results
 
 
 def process_sparql_result(result, index, concept_index):
@@ -368,29 +433,29 @@ def process_sparql_result(result, index, concept_index):
     if entity in index:
         ent_index = index[entity]
         ent_index["value"] += weight
-        if broader in ent_index["concept"]:
-            ent_index["concept"][broader]["value"] += weight
-            if concept not in ent_index["concept"][broader]["subconcepts"]:
-                ent_index["concept"][broader]["subconcepts"][concept] = concept_index_main[concept]
+        if broader in ent_index["keywords"]:
+            ent_index["keywords"][broader]["value"] += weight
+            if concept not in ent_index["keywords"][broader]["concepts"]:
+                ent_index["keywords"][broader]["concepts"][concept] = concept_index_main[concept]
         else:
-            ent_index["concept"][broader] = {
+            ent_index["keywords"][broader] = {
                 "value": weight,
                 "label": concept_index_main[broader]["label"],
-                "url": concept_index_main[broader]["url"],
-                "source": concept_index_main[broader]["source"],
-                "subconcepts": { concept: concept_index_main[concept] }
+                "uri": concept_index_main[broader]["uri"],
+                "sources": concept_index_main[broader]["sources"],
+                "concepts": { concept: concept_index_main[concept] }
             }
     else:
         index[entity] = {
             "type": type_label, 
             "value": weight,
-            "concept": {
+            "keywords": {
                 broader: {
                     "value": weight,
                     "label": concept_index_main[broader]["label"],
-                    "url": concept_index_main[broader]["url"],
-                    "source": concept_index_main[broader]["source"],
-                    "subconcepts": { concept: concept_index_main[concept] }
+                    "uri": concept_index_main[broader]["uri"],
+                    "sources": concept_index_main[broader]["sources"],
+                    "concepts": { concept: concept_index_main[concept] }
                 }
             }
         }
@@ -402,14 +467,14 @@ def process_sparql_result(result, index, concept_index):
 
 
 def extend_concept_index(match, concept_index):
-    url = match["url"]
+    uri = match["uri"]
     weight = 1
     if 'weight' in match:
         weight = match["weight"]
-    if url in concept_index:
-        concept_index[url] += weight
+    if uri in concept_index:
+        concept_index[uri] += weight
     else:
-        concept_index[url] = weight
+        concept_index[uri] = weight
     return concept_index
 
 
