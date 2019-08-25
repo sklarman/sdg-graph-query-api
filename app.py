@@ -21,8 +21,13 @@ PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 SELECT ?concept ?conceptBroader ?entity ?typeLabel WHERE {
     VALUES ?concept { %s }
     
-    GRAPH <http://data.un.org/concepts/sdg> {
-        ?concept skos:broader* ?conceptBroader .
+    # GRAPH <http://data.un.org/concepts/sdg> {
+    #     ?concept skos:broader* ?conceptBroader .
+    #     ?entity dct:subject ?conceptBroader .   
+    # }
+
+    GRAPH <http://data.un.org/concepts/sdg/extracted> {
+        ?concept skos:broader ?conceptBroader .
         ?entity dct:subject ?conceptBroader .   
     }
 
@@ -47,7 +52,7 @@ SELECT ?id ?type (GROUP_CONCAT(?con; separator=";") as ?matches) where {
     }
     
     OPTIONAL {
-        GRAPH <http://data.un.org/concepts/sdg> { 
+        GRAPH <http://data.un.org/concepts/sdg/extracted> { 
                 ?id dct:subject ?con .
         }
     }
@@ -104,6 +109,21 @@ SELECT ?id ?type (GROUP_CONCAT(?con; separator=";") as ?matches) where {
 #     }
 # } 
 # """
+
+DESCRIBE_QUERY = """
+PREFIX qb: <http://purl.org/linked-data/cube#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX sdgo: <http://data.un.org/ontology/sdg#>
+PREFIX codes: <http://data.un.org/codes/sdg/>
+CONSTRUCT {
+        ?node ?pred ?obj .
+}
+where { 
+        VALUES ?node { <%s> } 
+        
+        ?node ?pred ?obj .
+} 
+"""
 
 with open('response-template.json', encoding="utf-8") as f:
     response_template = json.load(f)
@@ -196,9 +216,6 @@ def get_final_result(entities):
             goal_entity = entities[goal["id"]]
             goal_entity["name"] = goal["name"]
 
-            if goal["id"] == "http://data.un.org/kos/sdg/01":
-                print(goal_entity)
-
             targets = []
 
             for target in goal["children"]:
@@ -257,6 +274,17 @@ def get_final_result(entities):
 @app.route('/')
 def index():
     return "This is graph query API!"
+
+
+@app.route('/describe', methods=['POST'])
+@cross_origin()
+def get_description():
+    uri = request.get_json()["uri"]
+    query = DESCRIBE_QUERY % uri
+    print(query)
+    response = requests.get(GRAPHDB, auth=('sdg-guest', 'lod4stats'), params={"query":query}, headers={"Accept":"application/ld+json"})
+    return Response(json.dumps(json.loads(response.content)), mimetype='application/json') 
+
 
 @app.route('/stats', methods=['POST'])
 @cross_origin()
