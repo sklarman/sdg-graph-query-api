@@ -12,8 +12,8 @@ from pyld import jsonld
 app = Flask(__name__)
 # CORS(app, resources={r"/*": {"origins": "http://34.66.148.181:3000"}})
 
-GRAPHDB = "http://34.66.148.181:7200/repositories/sdgs-data"
-# GRAPHDB = "http://localhost:7200/repositories/sdg-stats"
+# GRAPHDB = "http://34.66.148.181:7200/repositories/sdgs-data"
+GRAPHDB = "http://localhost:7200/repositories/sdg-stats"
 QUERY = """
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX dct: <http://purl.org/dc/terms/>
@@ -169,16 +169,16 @@ keywords_index = {}
     
 keyword_results = get_sparql_results(KEYWORD_QUERY)['results']['bindings']
 
-for entity in keyword_results:
-    keyword_concepts = entity["matches"]["value"].split(";")
-    keyword_records = {}
-    for keyword in keyword_concepts:
-        if keyword !='':
-            keyword_records[keyword] = concept_index_main[keyword]
-    keywords_index[entity["id"]["value"]] = {
-        "type": entity["type"]["value"],
-        "keywords": keyword_records
-    }
+# for entity in keyword_results:
+#     keyword_concepts = entity["matches"]["value"].split(";")
+#     keyword_records = {}
+#     for keyword in keyword_concepts:
+#         if keyword !='':
+#             keyword_records[keyword] = concept_index_main[keyword]
+#     keywords_index[entity["id"]["value"]] = {
+#         "type": entity["type"]["value"],
+#         "keywords": keyword_records
+#     }
 
 
 # ?concept skos:broader* ?conceptBroader .
@@ -295,9 +295,9 @@ def get_related_stats():
     # countries = "<" + ("> <").join(input_params["countries"]) + ">"
     countries = input_params["countries"] 
     stat = input_params["stat"]
-    # query = STAT_QUERY % (stat, countries)
-    # print(query)
-    # response = requests.get(GRAPHDB, auth=('sdg-guest', 'lod4stats'), params={"query":query}, headers={"Accept":"application/ld+json"})
+    query = STAT_QUERY % (stat, countries)
+    print(query)
+    response = requests.get(GRAPHDB, auth=('sdg-guest', 'lod4stats'), params={"query":query}, headers={"Accept":"application/ld+json"})
     
     graph = []
 
@@ -410,11 +410,11 @@ def get_related_stats():
         }        
     }
     
-    # doc = {'@context': context, '@graph': json.loads(response.content) }
-    # flattened = jsonld.flatten(doc, context)
-    # return Response(json.dumps(flattened), mimetype='application/json') 
+    doc = {'@context': context, '@graph': json.loads(response.content) }
+    flattened = jsonld.flatten(doc, context)
+    return Response(json.dumps(flattened), mimetype='application/json') 
 
-    return Response(json.dumps({'@context':context, '@graph': graph}), mimetype='application/json') 
+    # return Response(json.dumps({'@context':context, '@graph': graph}), mimetype='application/json') 
 
 
 @app.route('/api', methods=['POST'])
