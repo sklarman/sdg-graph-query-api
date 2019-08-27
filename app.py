@@ -12,7 +12,8 @@ from pyld import jsonld
 app = Flask(__name__)
 # CORS(app, resources={r"/*": {"origins": "http://34.66.148.181:3000"}})
 
-GRAPHDB = "http://34.66.148.181:7200/repositories/sdg-data"
+GRAPHDB = "http://34.66.148.181:7200/repositories/sdgs-data"
+# GRAPHDB = "http://localhost:7200/repositories/sdg-stats"
 QUERY = """
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX dct: <http://purl.org/dc/terms/>
@@ -45,11 +46,11 @@ PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX sdgo: <http://data.un.org/ontology/sdg#>
 SELECT ?id ?type (GROUP_CONCAT(?con; separator=";") as ?matches) where { 
     
-    GRAPH <http://data.un.org/kos/sdg> { 
+    # GRAPH <http://data.un.org/kos/sdg> { 
         VALUES ?t { sdgo:Goal sdgo:Target sdgo:Indicator sdgo:Series }
         ?id a ?t
         BIND(STRAFTER(str(?t), "http://data.un.org/ontology/sdg#") as ?type)
-    }
+    # }
     
     OPTIONAL {
         GRAPH <http://data.un.org/concepts/sdg/extracted> { 
@@ -59,35 +60,35 @@ SELECT ?id ?type (GROUP_CONCAT(?con; separator=";") as ?matches) where {
 } GROUP BY ?id ?type
 """
 
-# STAT_QUERY = """
-# PREFIX qb: <http://purl.org/linked-data/cube#>
-# PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-# PREFIX sdgo: <http://data.un.org/ontology/sdg#>
-# PREFIX codes: <http://data.un.org/codes/sdg/>
-# CONSTRUCT {
-#         ?obs ?p ?y .    
-#     	?obs ?z ?u .
-#      	?obs <http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure> ?unitCode .
-#     	?obs qb:measureType ?series .
-# }
-# where { 
-#     GRAPH <http://data.un.org/series/sdg> {
-#         BIND(<%s> as ?series)
-#         # VALUES ?country { %s } 
+STAT_QUERY = """
+PREFIX qb: <http://purl.org/linked-data/cube#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX sdgo: <http://data.un.org/ontology/sdg#>
+PREFIX codes: <http://data.un.org/codes/sdg/>
+CONSTRUCT {
+        ?obs ?p ?y .    
+    	?obs ?z ?u .
+     	?obs <http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure> ?unitCode .
+    	?obs qb:measureType ?series .
+}
+where { 
+    GRAPH <http://data.un.org/series/sdg> {
+        BIND(<%s> as ?series)
+        # VALUES ?country { %s } 
 
-#         ?series qb:slice ?slice .
-#         # ?slice <http://data.un.org/codes/sdg/geoArea> ?country .
-#         ?series <http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure> ?unitCode .
-#         ?slice qb:observation ?obs .
-#         FILTER EXISTS { 
-#             ?obs ?series [] .
-#         }
-#         ?slice ?z ?u .
-#         ?z a qb:DimensionProperty .  
-#         ?obs ?p ?y . 
-#     }
-# } 
-# """
+        ?series qb:slice ?slice .
+        # ?slice <http://data.un.org/codes/sdg/geoArea> ?country .
+        ?series <http://purl.org/linked-data/sdmx/2009/attribute#unitMeasure> ?unitCode .
+        ?slice qb:observation ?obs .
+        FILTER EXISTS { 
+            ?obs ?series [] .
+        }
+        ?slice ?z ?u .
+        ?z a qb:DimensionProperty .  
+        ?obs ?p ?y . 
+    }
+} 
+"""
 
 # STAT_QUERY2 = """
 # PREFIX qb: <http://purl.org/linked-data/cube#>
@@ -168,15 +169,15 @@ keywords_index = {}
     
 keyword_results = get_sparql_results(KEYWORD_QUERY)['results']['bindings']
 
-for entity in keyword_results:
-    keyword_concepts = entity["matches"]["value"].split(";")
-    keyword_records = {}
-    for keyword in keyword_concepts:
-        keyword_records[keyword] = concept_index_main[keyword]
-    keywords_index[entity["id"]["value"]] = {
-        "type": entity["type"]["value"],
-        "keywords": keyword_records
-    }
+# for entity in keyword_results:
+#     keyword_concepts = entity["matches"]["value"].split(";")
+#     keyword_records = {}
+#     for keyword in keyword_concepts:
+#         keyword_records[keyword] = concept_index_main[keyword]
+#     keywords_index[entity["id"]["value"]] = {
+#         "type": entity["type"]["value"],
+#         "keywords": keyword_records
+#     }
 
 
 # ?concept skos:broader* ?conceptBroader .
