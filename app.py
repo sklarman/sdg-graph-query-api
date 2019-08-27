@@ -173,7 +173,8 @@ for entity in keyword_results:
     keyword_concepts = entity["matches"]["value"].split(";")
     keyword_records = {}
     for keyword in keyword_concepts:
-        keyword_records[keyword] = concept_index_main[keyword]
+        if keyword !='':
+            keyword_records[keyword] = concept_index_main[keyword]
     keywords_index[entity["id"]["value"]] = {
         "type": entity["type"]["value"],
         "keywords": keyword_records
