@@ -285,8 +285,7 @@ def get_description():
     query = DESCRIBE_QUERY % uri
     print(query)
     response = requests.get(GRAPHDB, auth=('sdg-guest', 'lod4stats'), params={"query":query}, headers={"Accept":"application/ld+json"})
-    return Response(json.dumps(json.loads(response.content)), mimetype='application/json') 
-
+    return Response(json.dumps(json.loads(response.content.decode('utf-8'))), mimetype='application/json')
 
 @app.route('/stats', methods=['POST'])
 @cross_origin()
