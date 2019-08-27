@@ -301,10 +301,10 @@ def get_related_stats():
     
     graph = []
 
-    stat_cubes = cubes[stat]
-    for country in countries:
-        if country in stat_cubes:
-            graph.extend(stat_cubes[country])
+    # stat_cubes = cubes[stat]
+    # for country in countries:
+    #     if country in stat_cubes:
+    #         graph.extend(stat_cubes[country])
 
     context = {
         "Observation": "http://purl.org/linked-data/cube#Observation",
@@ -409,6 +409,7 @@ def get_related_stats():
             "@type": "@id"
         }        
     }
+
     
     doc = {'@context': context, '@graph': json.loads(response.content) }
     flattened = jsonld.flatten(doc, context)
