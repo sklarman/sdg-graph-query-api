@@ -292,7 +292,10 @@ def get_description():
 def get_related_stats():
     input_params = request.get_json()
     # countries = "<" + ("> <").join(input_params["countries"]) + ">"
-    countries = input_params["countries"] 
+    if "countries" in input_params:
+        countries = input_params["countries"] 
+    else:
+        countries = None
     stat = input_params["stat"]
     # query = STAT_QUERY % (stat, countries)
     # print(query)
@@ -301,10 +304,15 @@ def get_related_stats():
     graph = []
 
     stat_cubes = cubes[stat]
-    for country in countries:
-        if country in stat_cubes:
-            graph.extend(stat_cubes[country])
 
+    if countries != None:
+        for country in countries:
+            if country in stat_cubes:
+                graph.extend(stat_cubes[country])
+    else:
+        for country in stat_cubes:
+            graph.extend(stat_cubes[country])
+            
     context = {
         "Observation": "http://purl.org/linked-data/cube#Observation",
         "measureType": {
