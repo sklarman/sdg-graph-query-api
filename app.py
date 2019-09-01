@@ -303,15 +303,16 @@ def get_related_stats():
     
     graph = []
 
-    stat_cubes = cubes[stat]
+    if stat in cubes:
+        stat_cubes = cubes[stat]
 
-    if countries != None:
-        for country in countries:
-            if country in stat_cubes:
+        if countries != None:
+            for country in countries:
+                if country in stat_cubes:
+                    graph.extend(stat_cubes[country])
+        else:
+            for country in stat_cubes:
                 graph.extend(stat_cubes[country])
-    else:
-        for country in stat_cubes:
-            graph.extend(stat_cubes[country])
             
     context = {
         "Observation": "http://purl.org/linked-data/cube#Observation",
