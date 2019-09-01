@@ -12,7 +12,7 @@ from pyld import jsonld
 app = Flask(__name__)
 # CORS(app, resources={r"/*": {"origins": "http://34.66.148.181:3000"}})
 
-GRAPHDB = "http://34.66.148.181:7200/repositories/sdgs-data"
+GRAPHDB = "http://34.66.148.181:7200/repositories/sdg"
 # GRAPHDB = "http://localhost:7200/repositories/sdg-stats"
 QUERY = """
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
@@ -53,9 +53,8 @@ SELECT ?id ?type (GROUP_CONCAT(?con; separator=";") as ?matches) where {
     # }
     
     OPTIONAL {
-        GRAPH <http://data.un.org/concepts/sdg/extracted> { 
                 ?id dct:subject ?con .
-        }
+        FILTER (CONTAINS(str(?con), "http://data.un.org/concepts"))
     }
 } GROUP BY ?id ?type
 """
