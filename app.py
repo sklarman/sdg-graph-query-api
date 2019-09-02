@@ -28,13 +28,15 @@ SELECT ?concept ?conceptBroader ?entity ?typeLabel WHERE {
     # }
 
     GRAPH <http://data.un.org/concepts/sdg/extracted> {
-        ?concept skos:broader ?conceptBroader .
-        ?entity dct:subject ?conceptBroader .   
+        ?concept skos:broader ?conceptBroader .   
     }
+
+    ?entity dct:subject ?conceptBroader .
 
     ?entity rdf:type ?type .
     FILTER (CONTAINS(str(?type), "ontology/sdg"))
     ?type rdfs:label ?typeName .
+    FILTER(lang(?typeName)='en')
 
     BIND(STR(?typeName) as ?typeLabel)
 }
@@ -302,6 +304,8 @@ def get_related_stats():
     
     graph = []
 
+    more_data = True
+
     if stat in cubes:
         stat_cubes = cubes[stat]
 
@@ -312,6 +316,11 @@ def get_related_stats():
         else:
             for country in stat_cubes:
                 graph.extend(stat_cubes[country])
+            more_data = False
+
+    else:
+        more_data = False
+
             
     context = {
         "Observation": "http://purl.org/linked-data/cube#Observation",
@@ -421,7 +430,7 @@ def get_related_stats():
     # flattened = jsonld.flatten(doc, context)
     # return Response(json.dumps(flattened), mimetype='application/json') 
 
-    return Response(json.dumps({'@context':context, '@graph': graph}), mimetype='application/json') 
+    return Response(json.dumps({'@context':context, "more_data":more_data, '@graph': graph}), mimetype='application/json') 
 
 
 @app.route('/api', methods=['POST'])
