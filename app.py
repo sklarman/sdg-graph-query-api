@@ -28,7 +28,7 @@ SELECT ?concept ?conceptBroader ?entity ?typeLabel WHERE {
     # }
 
     GRAPH <http://data.un.org/concepts/sdg/extracted> {
-        ?concept skos:broader ?conceptBroader .   
+        ?concept skos:broader* ?conceptBroader .   
     }
 
     ?entity dct:subject ?conceptBroader .
@@ -242,28 +242,42 @@ def get_final_result(entities):
 
                                     new_series = merge(series_entity, series)
 
-                                    if new_series["value"] > 2:
+                                    if new_series["value"] > 4:
                                         serieses.append(new_series)
 
                             indicator["children"] = serieses
 
                             new_indicator = merge(indicator_entity, indicator)
                     
-                            if new_indicator["value"] > 2  or len(serieses)>0:
+                            if new_indicator["value"] > 4  or len(serieses)>0:
+                                if len(serieses)>0:
+                                    new_indicator.pop("value")
+                                    for series_inst in serieses:
+                                        series_inst["value"] = series_inst["value"] / (len(serieses) / 1.5)
                                 indicators.append(new_indicator)
 
                     target["children"] = indicators
 
                     new_target = merge(target_entity, target)
             
-                    if new_target["value"] > 2 or len(indicators)>0:
+                    if new_target["value"] > 4 or len(indicators)>0:
+                        if len(indicators)>0:
+                            new_target.pop("value")
+                            for indicator_inst in indicators:
+                                if "value" in indicator_inst:
+                                    indicator_inst["value"] = indicator_inst["value"] / (len(indicators) /1.5 )
                         targets.append(new_target)
 
             goal["children"] = targets
 
             new_goal = merge(goal_entity, goal)
             
-            if new_goal["value"] > 2  or len(targets)>0:
+            if new_goal["value"] > 4 or len(targets)>0:
+                if len(targets)>0:
+                    new_goal.pop("value")
+                    for target_inst in targets:
+                        if "value" in target_inst:
+                            target_inst["value"] = target_inst["value"] / (len(targets) / 1.5)
                 goals.append(new_goal)
 
     resp["children"] = goals
@@ -470,9 +484,9 @@ def process_sparql_result(result, index, concept_index):
 
     weight = concept_index[concept]
     if type_label=="Goal":
-        weight = weight * 1.2 #3
+        weight = weight * 1 #3
     if type_label=="Target":
-        weight = weight * 1.1 #1.3
+        weight = weight * 1 #1.3
     if type_label=="Indicator":
         weight = weight * 1 #1.1 
 
