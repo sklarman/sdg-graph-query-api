@@ -253,7 +253,7 @@ def get_final_result(entities):
                                 if len(serieses)>0:
                                     new_indicator.pop("value")
                                     for series_inst in serieses:
-                                        series_inst["value"] = series_inst["value"] / (len(serieses) / 1.5)
+                                        series_inst["value"] = series_inst["value"] / (len(serieses) / 1.3)
                                 indicators.append(new_indicator)
 
                     target["children"] = indicators
@@ -265,7 +265,7 @@ def get_final_result(entities):
                             new_target.pop("value")
                             for indicator_inst in indicators:
                                 if "value" in indicator_inst:
-                                    indicator_inst["value"] = indicator_inst["value"] / (len(indicators) /1.5 )
+                                    indicator_inst["value"] = indicator_inst["value"] / (len(indicators) / 1.3)
                         targets.append(new_target)
 
             goal["children"] = targets
@@ -277,7 +277,7 @@ def get_final_result(entities):
                     new_goal.pop("value")
                     for target_inst in targets:
                         if "value" in target_inst:
-                            target_inst["value"] = target_inst["value"] / (len(targets) / 1.5)
+                            target_inst["value"] = target_inst["value"] / (len(targets) / 1.3)
                 goals.append(new_goal)
 
     resp["children"] = goals
