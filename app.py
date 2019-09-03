@@ -470,11 +470,11 @@ def process_sparql_result(result, index, concept_index):
 
     weight = concept_index[concept]
     if type_label=="Goal":
-        weight = weight * 3
+        weight = weight * 1.2 #3
     if type_label=="Target":
-        weight = weight * 1.3
+        weight = weight * 1.1 #1.3
     if type_label=="Indicator":
-        weight = weight * 1.1
+        weight = weight * 1 #1.1 
 
     if entity in index:
         ent_index = index[entity]
