@@ -21,17 +21,14 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 SELECT ?concept ?conceptBroader ?entity ?typeLabel WHERE {
     VALUES ?concept { %s }
-    
-    # GRAPH <http://data.un.org/concepts/sdg> {
-    #     ?concept skos:broader* ?conceptBroader .
-    #     ?entity dct:subject ?conceptBroader .   
-    # }
 
     GRAPH <http://data.un.org/concepts/sdg/extracted> {
         ?concept skos:broader* ?conceptBroader .   
     }
+    
+    ?conceptBroader skos:exactMatch ?conceptBroaderExact .
+    ?entity dct:subject ?conceptBroaderExact .
 
-    ?entity dct:subject ?conceptBroader .
 
     ?entity rdf:type ?type .
     FILTER (CONTAINS(str(?type), "ontology/sdg"))
