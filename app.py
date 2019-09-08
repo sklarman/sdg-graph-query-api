@@ -43,7 +43,7 @@ KEYWORD_QUERY = """
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX sdgo: <http://data.un.org/ontology/sdg#>
-SELECT ?id ?type (GROUP_CONCAT(?con; separator=";") as ?matches) where { 
+SELECT ?id ?type (GROUP_CONCAT(DISTINCT ?con; separator=";") as ?matches) where { 
     
     # GRAPH <http://data.un.org/kos/sdg> { 
         VALUES ?t { sdgo:Goal sdgo:Target sdgo:Indicator sdgo:Series }
@@ -52,7 +52,8 @@ SELECT ?id ?type (GROUP_CONCAT(?con; separator=";") as ?matches) where {
     # }
     
     OPTIONAL {
-                ?id dct:subject ?con .
+        		?id dct:subject ?conc .
+        		?con skos:exactMatch ?conc .
         FILTER (CONTAINS(str(?con), "http://data.un.org/concepts"))
     }
 } GROUP BY ?id ?type
