@@ -1,20 +1,18 @@
 [
     {
-        "url": "http://metadata.un.org/thesaurus#1005064"
+        "uri": "http://data.un.org/concepts/sdg/b24a918e896b25b53eae5232e68d8722",
+        "weight": 2
     },
     {
-        "url": "http://eurovoc.europa.eu/2281"
+        "uri": "http://data.un.org/concepts/sdg/183fdaa6b491ec70289516a19d8bc468",
+        "weight": 3
     },
     {
-        "url": "http://eurovoc.europa.eu/2062"
+        "uri": "http://data.un.org/concepts/sdg/86601675138015edb458866e7d879118",
+        "weight": 4
     },
     {
-        "url": "http://metadata.un.org/thesaurus#1000544"
-    },
-    {
-        "url": "http://eurovoc.europa.eu/6781"
-    },
-    {
-        "url": "http://metadata.un.org/thesaurus#1006166"
+        "uri": "http://data.un.org/concepts/sdg/e3c4abbfc5d65cdf8512e782752d889d",
+        "weight": 5
     }
 ]
